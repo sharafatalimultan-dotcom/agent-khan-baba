@@ -1,0 +1,59 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  html { scroll-behavior: smooth; }
+  body { @apply bg-white text-ink antialiased; font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif; }
+  h1 { @apply text-3xl font-extrabold tracking-tight sm:text-5xl; text-wrap: balance; }
+  h2 { @apply text-xl font-bold sm:text-2xl; }
+  h3 { @apply text-lg font-semibold; }
+  :focus-visible { @apply outline-2 outline-offset-2 outline-brand; outline-style: solid; }
+}
+
+@layer components {
+  .btn-primary { @apply inline-flex w-full items-center justify-center gap-2 rounded-xl bg-brand px-5 py-3 font-semibold text-white shadow-card transition hover:bg-brand-dark disabled:cursor-not-allowed disabled:opacity-60 sm:w-auto; }
+  .btn-secondary { @apply inline-flex items-center justify-center gap-2 rounded-xl border border-panel-border bg-white px-4 py-2.5 font-semibold text-ink transition hover:bg-panel; }
+  .card { @apply rounded-xl2 border border-panel-border bg-white p-5 shadow-card; }
+  .panel { @apply rounded-[1.5rem] border border-panel-border bg-gradient-to-br from-panel via-white to-panel p-5 shadow-[0_12px_40px_rgba(30,64,175,0.10)] sm:p-7; }
+  .chip { @apply inline-flex items-center gap-1.5 rounded-full border border-slate-200 bg-white px-3 py-1 text-xs font-semibold text-ink-soft shadow-sm; }
+  .input { @apply w-full rounded-xl border border-slate-300 bg-white px-4 py-3 text-base placeholder:text-slate-400 focus:border-brand focus:ring-2 focus:ring-brand/20; }
+  .label { @apply mb-1 block text-sm font-semibold text-ink-soft; }
+  .prose-page p { @apply mb-4 leading-7 text-ink-soft; }
+  .prose-page h2 { @apply mb-3 mt-8 text-ink; }
+  .prose-page ul { @apply mb-4 list-disc space-y-2 pl-6 text-ink-soft; }
+  .prose-page ol { @apply mb-4 list-decimal space-y-2 pl-6 text-ink-soft; }
+  .prose-page a { @apply font-semibold text-brand underline underline-offset-2; }
+}
+
+/* Optional persistent dark theme. The default light theme remains unchanged. */
+html.dark { color-scheme: dark; background: #0b1220; }
+html.dark body { background: #0b1220; color: #e5edf7; }
+html.dark .bg-white { background-color: #111c2e !important; }
+html.dark .bg-panel { background-color: #17283a !important; }
+html.dark .bg-panel\/80 { background-color: rgb(23 40 58 / .8) !important; }
+html.dark .text-ink { color: #e5edf7 !important; }
+html.dark .text-ink-soft { color: #b5c3d5 !important; }
+html.dark .border-slate-200,
+html.dark .border-slate-300,
+html.dark .border-panel-border { border-color: #2b3c51 !important; }
+html.dark .bg-slate-50,
+html.dark .bg-slate-100 { background-color: #172538 !important; }
+html.dark .text-slate-500,
+html.dark .text-slate-600,
+html.dark .text-slate-700 { color: #b5c3d5 !important; }
+html.dark .shadow-card { box-shadow: 0 8px 24px rgb(0 0 0 / .22); }
+html.dark input,
+html.dark textarea,
+html.dark select { background-color: #0f1a2a; color: #e5edf7; border-color: #35475e; }
+html.dark input::placeholder,
+html.dark textarea::placeholder { color: #8293a9; }
+html.dark header { background-color: rgb(17 28 46 / .92); border-color: #26364a; }
+html.dark #site-menu { background-color: #111c2e; border-color: #2b3c51; }
+html.dark .prose-page a { color: #69d9a0; }
+html.dark .bg-gradient-to-b.from-emerald-50 { background-image: linear-gradient(to bottom, #102c28, #0b1220 70%, #0b1220); }
+html.dark .bg-gradient-to-br.from-panel { background-image: linear-gradient(to bottom right, #17283a, #111c2e, #17283a); }
+@media (prefers-reduced-motion: reduce) {
+  html { scroll-behavior: auto; }
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
