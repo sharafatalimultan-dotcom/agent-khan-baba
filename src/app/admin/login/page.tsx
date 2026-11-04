@@ -1,20 +1,37 @@
 
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createSupabaseBrowser } from "@/lib/supabase/browser";
 import Logo from "@/components/Logo";
 
+type Mode = "login" | "forgot" | "update";
+
+const SITE_URL = "https://agent-khan-baba.vercel.app";
+
 export default function AdminLogin() {
+  const [mode, setMode] = useState<Mode>("login");
   const [error, setError] = useState<string | null>(null);
   const [message, setMessage] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
-  const [resetMode, setResetMode] = useState(false);
 
   const configured = Boolean(
     process.env.NEXT_PUBLIC_SUPABASE_URL &&
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
   );
+
+  // Recovery link open hone par password update screen dikhayein.
+  useEffect(() => {
+    const params = new URLSearchParams(window.location.search);
+
+    if (
+      params.get("reset") === "success" ||
+      params.get("type") === "recovery"
+    ) {
+      setMode("update");
+      setMessage("Please enter your new password.");
+    }
+  }, []);
 
   async function onSubmit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
@@ -24,13 +41,30 @@ export default function AdminLogin() {
     const form = new FormData(e.currentTarget);
     const email = String(form.get("email") ?? "").trim();
     const password = String(form.get("password") ?? "");
+    const confirmPassword = String(
+      form.get("confirmPassword") ?? ""
+    );
 
-    if (!email) {
-      return setError("Please enter your email address.");
+    if (!email && mode !== "update") {
+      setError("Please enter your email address.");
+      return;
     }
 
-    if (!resetMode && !password) {
-      return setError("Please enter your password.");
+    if (mode === "login" && !password) {
+      setError("Please enter your password.");
+      return;
+    }
+
+    if (mode === "update") {
+      if (password.length < 6) {
+        setError("Password must be at least 6 characters.");
+        return;
+      }
+
+      if (password !== confirmPassword) {
+        setError("Passwords do not match.");
+        return;
+      }
     }
 
     setLoading(true);
@@ -38,18 +72,18 @@ export default function AdminLogin() {
     try {
       const supabase = createSupabaseBrowser();
 
-      if (resetMode) {
+      // Send password recovery email.
+      if (mode === "forgot") {
         const { error: resetError } =
           await supabase.auth.resetPasswordForEmail(email, {
-            redirectTo:
-              `${window.location.origin}/admin/login?reset=success`,
+            redirectTo: `${SITE_URL}/admin/login?reset=success`,
           });
 
         if (resetError) {
           setError(resetError.message);
         } else {
           setMessage(
-            "Password recovery email sent. Check your inbox and spam folder."
+            "Recovery email sent. Please check your inbox and spam folder."
           );
         }
 
@@ -57,6 +91,37 @@ export default function AdminLogin() {
         return;
       }
 
+      // Save the new password after recovery link verification.
+      if (mode === "update") {
+        const { error: updateError } =
+          await supabase.auth.updateUser({
+            password,
+          });
+
+        if (updateError) {
+          setError(updateError.message);
+          setLoading(false);
+          return;
+        }
+
+        await supabase.auth.signOut();
+
+        window.history.replaceState(
+          {},
+          "",
+          "/admin/login"
+        );
+
+        setMode("login");
+        setMessage(
+          "Password updated successfully. Please sign in with your new password."
+        );
+
+        setLoading(false);
+        return;
+      }
+
+      // Normal Admin Login.
       const { error: signInError } =
         await supabase.auth.signInWithPassword({
           email,
@@ -64,14 +129,18 @@ export default function AdminLogin() {
         });
 
       if (signInError) {
-        setError("Sign-in failed. Check your email and password.");
+        setError(signInError.message);
         setLoading(false);
         return;
       }
 
       window.location.assign("/admin");
-    } catch {
-      setError("Something went wrong. Please try again.");
+    } catch (err) {
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Something went wrong. Please try again."
+      );
       setLoading(false);
     }
   }
@@ -83,7 +152,11 @@ export default function AdminLogin() {
       </div>
 
       <h1 className="text-center text-2xl">
-        {resetMode ? "Reset Admin Password" : "Admin sign in"}
+        {mode === "login"
+          ? "Admin sign in"
+          : mode === "forgot"
+          ? "Forgot Password"
+          : "Set New Password"}
       </h1>
 
       {!configured ? (
@@ -91,9 +164,9 @@ export default function AdminLogin() {
           role="alert"
           className="mt-6 rounded-xl bg-brand-soft p-4 text-sm text-brand-dark"
         >
-          Supabase is not configured. Set
+          Supabase is not configured. Please check your
           NEXT_PUBLIC_SUPABASE_URL and
-          NEXT_PUBLIC_SUPABASE_ANON_KEY, then reload.
+          NEXT_PUBLIC_SUPABASE_ANON_KEY settings.
         </p>
       ) : (
         <form
@@ -101,30 +174,57 @@ export default function AdminLogin() {
           className="card mt-6 space-y-4"
           noValidate
         >
-          <div>
-            <label className="label" htmlFor="a-email">
-              Email
-            </label>
-            <input
-              id="a-email"
-              name="email"
-              type="email"
-              autoComplete="username"
-              className="input"
-              required
-            />
-          </div>
+          {mode !== "update" && (
+            <div>
+              <label className="label" htmlFor="a-email">
+                Email
+              </label>
+              <input
+                id="a-email"
+                name="email"
+                type="email"
+                autoComplete="username"
+                className="input"
+                required
+              />
+            </div>
+          )}
 
-          {!resetMode && (
+          {mode !== "forgot" && (
             <div>
               <label className="label" htmlFor="a-pass">
-                Password
+                {mode === "update"
+                  ? "New Password"
+                  : "Password"}
               </label>
               <input
                 id="a-pass"
                 name="password"
                 type="password"
-                autoComplete="current-password"
+                autoComplete={
+                  mode === "update"
+                    ? "new-password"
+                    : "current-password"
+                }
+                className="input"
+                required
+              />
+            </div>
+          )}
+
+          {mode === "update" && (
+            <div>
+              <label
+                className="label"
+                htmlFor="a-confirm-pass"
+              >
+                Confirm New Password
+              </label>
+              <input
+                id="a-confirm-pass"
+                name="confirmPassword"
+                type="password"
+                autoComplete="new-password"
                 className="input"
                 required
               />
@@ -149,27 +249,37 @@ export default function AdminLogin() {
             </p>
           )}
 
-          <button className="btn-primary w-full" disabled={loading}>
+          <button
+            type="submit"
+            className="btn-primary w-full"
+            disabled={loading}
+          >
             {loading
               ? "Please wait..."
-              : resetMode
-                ? "Send Password Recovery"
-                : "Sign in"}
+              : mode === "login"
+              ? "Sign in"
+              : mode === "forgot"
+              ? "Send Password Recovery"
+              : "Update Password"}
           </button>
 
-          <button
-            type="button"
-            className="w-full text-sm underline"
-            onClick={() => {
-              setResetMode(!resetMode);
-              setError(null);
-              setMessage(null);
-            }}
-          >
-            {resetMode
-              ? "Back to Admin Login"
-              : "Forgot Password?"}
-          </button>
+          {mode !== "update" && (
+            <button
+              type="button"
+              className="w-full text-sm underline"
+              onClick={() => {
+                setMode(
+                  mode === "login" ? "forgot" : "login"
+                );
+                setError(null);
+                setMessage(null);
+              }}
+            >
+              {mode === "login"
+                ? "Forgot Password?"
+                : "Back to Admin Login"}
+            </button>
+          )}
         </form>
       )}
     </div>
